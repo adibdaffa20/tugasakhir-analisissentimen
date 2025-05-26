@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Sentimen CSV</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 50px;
+        }
+        .upload-container {
+            display: flex;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .upload-left {
+            background-color: #FF9800;
+            width: 40%;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-right {
+            background-color: white;
+            width: 60%;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-box:hover {
+            border-color: #FF9800;
+        }
+        .upload-icon {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+        .csv-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        h2 {
+            color: #FF9800;
+            font-weight: 500;
+        }
+        .result-section {
+            text-align: center;
+            margin-top: 50px;
+        }
+        .chart-container {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 15px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        .negatif-color {
+            background-color: #FF9800;
+        }
+        .positif-color {
+            background-color: #76D7EA;
+        }
+        #fileInput {
+            display: none;
+        }
+        .description {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        #resultSection {
+            display: none;
+        }
+        .loading {
+            display: none;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF9800;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sample-data {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            background-color: #f9f9f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .positive-stat {
+            border-top: 4px solid #76D7EA;
+        }
+        .negative-stat {
+            border-top: 4px solid #FF9800;
+        }
+        .total-stat {
+            border-top: 4px solid #666;
+        }
+        .sentiment-test-section {
+            background: white;
+            margin: 30px auto;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 500px;
+            text-align: center;
+        }
+        .sentiment-test-section h3 {
+            color: #FF9800;
+            margin-bottom: 10px;
+        }
+        .input-container {
+            margin: 20px 0;
+        }
+        #sentimentInput {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+        #sentimentInput:focus {
+            outline: none;
+            border-color: #FF9800;
+        }
+        #analyzeSentimentBtn {
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #analyzeSentimentBtn:hover {
+            background-color: #e68900;
+        }
+        #analyzeSentimentBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .sentiment-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            min-height: 20px;
+            display: none;
+        }
+        .sentiment-result.positive {
+            background-color: #e8f8f5;
+            color: #008080;
+            border: 2px solid #76D7EA;
+            display: block;
+        }
+        .sentiment-result.negative {
+            background-color: #fff7e6;
+            color: #FF4500;
+            border: 2px solid #FF9800;
+            display: block;
+        }
+        .sentiment-result.neutral {
+            background-color: #f8f9fa;
+            color: #666;
+            border: 2px solid #ddd;
+            display: block;
+        }
+
+        .preprocessing-section {
+            margin-top: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .preprocessing-section h3 {
+            color: #FF9800;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .preprocessing-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .preprocessing-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .preprocessing-tab.active {
+            color: #FF9800;
+            border-bottom-color: #FF9800;
+            font-weight: 500;
+        }
+
+        .preprocessing-tab:hover {
+            color: #FF9800;
+            background-color: #f9f9f9;
+        }
+
+        .preprocessing-content {
+            display: none;
+        }
+
+        .preprocessing-content.active {
+            display: block;
+        }
+
+        .preprocessing-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .preprocessing-table th {
+            background-color: #f8f9fa;
+            color: #333;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+            table-layout: fixed;
+        }
+
+        .preprocessing-table td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+            word-wrap: break-word;
+            max-width: 200px;
+        }
+
+        .preprocessing-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .preprocessing-table tbody tr:hover {
+            background-color: #fff3e0;
+        }
+
+        .original-text {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .processed-text {
+            color: #666;
+            font-style: italic;
+        }
+
+        .step-indicator {
+            display: inline-block;
+            background: #FF9800;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .no-data-message {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
+        /* RESPONSIVE STYLES */
+        @media (max-width: 992px) {
+            .upload-container {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .upload-left,
+            .upload-right {
+                width: 100%;
+                padding: 20px;
+                text-align: center;
+            }
+
+            .stats-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .stat-box {
+                width: 80%;
+                margin-bottom: 20px;
+            }
+
+            .chart-container {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+            }
+
+            .legend {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .legend-item {
+                margin: 10px 0;
+            }
+
+            .preprocessing-tabs {
+                flex-direction: column;
+            }
+
+            .preprocessing-tab {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .upload-section {
+                padding: 0 10px;
+            }
+
+            .sentiment-test-section,
+            .preprocessing-section {
+                padding: 15px;
+                margin: 20px 10px;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .upload-box {
+                padding: 30px 10px;
+            }
+
+            #analyzeSentimentBtn {
+                width: 100%;
+                padding: 12px;
+            }
+
+            #sentimentInput {
+                font-size: 13px;
+            }
+
+            .preprocessing-table td, 
+            .preprocessing-table th {
+                font-size: 12px;
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-section">
+            <div class="upload-container">
+                <div class="upload-left">
+                </div>
+                <div class="upload-right">
+                    <div class="csv-label">CSV Only *</div>
+                    <div id="dropZone" class="upload-box">
+                        <div class="upload-icon">📁</div>
+                        <h2>Drop Your File CSV. Here!</h2>
+                        <p class="description">Upload file CSV Anda untuk memudahkan proses klasifikasi.</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".csv">
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Memproses data sentimen...</p>
+        </div>
+
+        <div id="resultSection" class="result-section">
+            <h2>Result</h2>
+            <p>Komposisi sentimen berupa positif dan negatif.</p>
+            
+            <div class="stats-container">
+                <div class="stat-box positive-stat">
+                    <div class="stat-number" id="positiveCount">0</div>
+                    <div class="stat-label">Positif</div>
+                </div>
+                <div class="stat-box negative-stat">
+                    <div class="stat-number" id="negativeCount">0</div>
+                    <div class="stat-label">Negatif</div>
+                </div>
+                <div class="stat-box total-stat">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="sentimentChart"></canvas>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color negatif-color"></div>
+                    <span>Negatif</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color positif-color"></div>
+                    <span>Positif</span>
+                </div>
+            </div>
+
+            <div class="sentiment-test-section">
+                <h3>Test Sentimen</h3>
+                <p>Masukkan teks untuk menguji analisis sentimen:</p>
+                <div class="input-container">
+                    <textarea id="sentimentInput" placeholder="Ketik teks yang ingin dianalisis sentimennya..." rows="4"></textarea>
+                    <button id="analyzeSentimentBtn" onclick="analyzeSingleSentiment()">Analisis Sentimen</button>
+                </div>
+                <div id="sentimentResult" class="sentiment-result"></div>
+            </div>
+
+            <div id="sampleDataContainer" class="sample-data">
+                <h3>Contoh Data</h3>
+                <div id="sampleData"></div>
+            <div id="preprocessingSection" class="preprocessing-section">
+        <h3>Hasil Preprocessing</h3>
+        <p>Tahapan preprocessing yang dilakukan pada data teks:</p>
+        
+        <div class="preprocessing-tabs">
+            <button class="preprocessing-tab active" onclick="showPreprocessingStep('cleaning')">
+                <span class="step-indicator">1</span>Cleaning
+            </button>
+            <button class="preprocessing-tab" onclick="showPreprocessingStep('case_folding')">
+                <span class="step-indicator">2</span>Case Folding
+            </button>
+            <button class="preprocessing-tab" onclick="showPreprocessingStep('hasil_normalisasi')">
+                <span class="step-indicator">3</span>Normalisasi
+            </button>
+            <button class="preprocessing-tab" onclick="showPreprocessingStep('tokenize')">
+                <span class="step-indicator">4</span>Tokenize
+            </button>
+            <button class="preprocessing-tab" onclick="showPreprocessingStep('stopword_removal')">
+                <span class="step-indicator">5</span>Stopword Removal
+            </button>
+            <button class="preprocessing-tab" onclick="showPreprocessingStep('stemming_data')">
+                <span class="step-indicator">6</span>Stemming
+            </button>
+        </div>
+        
+        <div id="cleaning" class="preprocessing-content active">
+            <div id="cleaningData" class="no-data-message">Data cleaning tidak tersedia</div>
+        </div>
+        
+        <div id="case_folding" class="preprocessing-content">
+            <div id="caseFoldingData" class="no-data-message">Data case folding tidak tersedia</div>
+        </div>
+        
+        <div id="hasil_normalisasi" class="preprocessing-content">
+            <div id="normalisasiData" class="no-data-message">Data normalisasi tidak tersedia</div>
+        </div>
+        
+        <div id="tokenize" class="preprocessing-content">
+            <div id="tokenizeData" class="no-data-message">Data tokenize tidak tersedia</div>
+        </div>
+        
+        <div id="stopword_removal" class="preprocessing-content">
+            <div id="stopwordData" class="no-data-message">Data stopword removal tidak tersedia</div>
+        </div>
+        
+        <div id="stemming_data" class="preprocessing-content">
+            <div id="stemmingData" class="no-data-message">Data stemming tidak tersedia</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const resultSection = document.getElementById('resultSection');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const sampleDataContainer = document.getElementById('sampleDataContainer');
+            let sentimentChart;
+            
+
+            // Handle file selection via file input
+            dropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // Handle drag and drop
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.style.borderColor = '#FF9800';
+                dropZone.style.backgroundColor = 'rgba(255, 152, 0, 0.05)';
+            });
+
+            dropZone.addEventListener('dragleave', function() {
+                dropZone.style.borderColor = '#ccc';
+                dropZone.style.backgroundColor = 'transparent';
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.style.borderColor = '#ccc';
+                dropZone.style.backgroundColor = 'transparent';
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.name.toLowerCase().endsWith('.csv')) {
+                    handleFile(file);
+                } else {
+                    alert('Hanya file CSV yang diperbolehkan!');
+                }
+            });
+
+            function handleFile(file) {
+                // Tampilkan loading indicator
+                loadingIndicator.style.display = 'block';
+                resultSection.style.display = 'none';
+                
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        if (results.data && results.data.length > 0) {
+                            // Berhasil parsing data CSV
+                            setTimeout(() => {
+                                analyzeData(results.data, results.meta.fields);
+                                loadingIndicator.style.display = 'none';
+                            }, 1000);
+                        } else {
+                            alert('File CSV kosong atau tidak valid');
+                            loadingIndicator.style.display = 'none';
+                        }
+                    },
+                    error: function(error) {
+                        console.error('Error parsing CSV:', error);
+                        alert('Terjadi kesalahan saat memproses file CSV.');
+                        loadingIndicator.style.display = 'none';
+                    }
+                });
+            }
+
+            function analyzeData(data, fields) {
+                console.log('Available columns:', fields);
+                console.log('Sample data:', data[0]);
+                
+                // Cari kolom sentiment_label
+                const sentimentColumn = findSentimentColumn(fields);
+                
+                if (!sentimentColumn) {
+                    alert('Kolom sentiment_label tidak ditemukan dalam file CSV. Pastikan file Anda memiliki kolom dengan nama "sentiment_label" atau serupa.');
+                    return;
+                }
+                
+                console.log('Using sentiment column:', sentimentColumn);
+                
+                // Hitung jumlah sentimen positif dan negatif
+                const results = countSentiments(data, sentimentColumn);
+                
+                if (results.total === 0) {
+                    alert('Tidak ada data sentimen yang valid ditemukan.');
+                    return;
+                }
+                
+                // Tampilkan hasil
+                resultSection.style.display = 'block';
+                
+                // Update statistik
+                updateStatistics(results.positive, results.negative, results.total);
+                
+                // Buat chart dengan hasil analisis
+                createChart(results.positive, results.negative);
+                
+                // Tampilkan contoh data
+                displaySampleData(data, sentimentColumn, results.details);
+                displayPreprocessingData(data, fields);
+                
+                // Scroll ke hasil
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function findSentimentColumn(fields) {
+                // Cari kolom yang mengandung kata kunci sentiment
+                const sentimentKeywords = [
+                    'sentiment_label', 'sentiment', 'sentimen', 'label', 
+                    'classification', 'klasifikasi', 'result', 'hasil'
+                ];
+                
+                // Coba exact match dulu
+                for (const keyword of sentimentKeywords) {
+                    const column = fields.find(field => 
+                        field.toLowerCase() === keyword.toLowerCase()
+                    );
+                    if (column) return column;
+                }
+                
+                // Kemudian coba partial match
+                for (const keyword of sentimentKeywords) {
+                    const column = fields.find(field => 
+                        field.toLowerCase().includes(keyword.toLowerCase())
+                    );
+                    if (column) return column;
+                }
+                
+                return null;
+            }
+
+            function countSentiments(data, sentimentColumn) {
+                let positiveCount = 0;
+                let negativeCount = 0;
+                let totalCount = 0;
+                let details = [];
+                
+                data.forEach((row, index) => {
+                    const sentimentValue = row[sentimentColumn];
+                    
+                    if (!sentimentValue || typeof sentimentValue !== 'string') {
+                        return; // Skip empty or invalid rows
+                    }
+                    
+                    const sentiment = sentimentValue.toLowerCase().trim();
+                    
+                    // Deteksi berbagai format sentiment
+                    if (sentiment === 'positif' || sentiment === 'positive' || 
+                        sentiment === 'pos' || sentiment === '1' || sentiment === 'good') {
+                        positiveCount++;
+                        totalCount++;
+                        details.push({
+                            index: index,
+                            sentiment: 'positif',
+                            originalValue: sentimentValue,
+                            row: row
+                        });
+                    } else if (sentiment === 'negatif' || sentiment === 'negative' || 
+                               sentiment === 'neg' || sentiment === '0' || sentiment === 'bad') {
+                        negativeCount++;
+                        totalCount++;
+                        details.push({
+                            index: index,
+                            sentiment: 'negatif',
+                            originalValue: sentimentValue,
+                            row: row
+                        });
+                    }
+                });
+                
+                return {
+                    positive: positiveCount,
+                    negative: negativeCount,
+                    total: totalCount,
+                    details: details
+                };
+            }
+
+            function updateStatistics(positive, negative, total) {
+                document.getElementById('positiveCount').textContent = positive;
+                document.getElementById('negativeCount').textContent = negative;
+                document.getElementById('totalCount').textContent = total;
+            }
+
+            function createChart(positive, negative) {
+                const ctx = document.getElementById('sentimentChart').getContext('2d');
+                
+                // Hancurkan chart sebelumnya jika ada
+                if (sentimentChart) {
+                    sentimentChart.destroy();
+                }
+                
+                // Buat chart baru
+                sentimentChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Positif', 'Negatif'],
+                        datasets: [{
+                            data: [positive, negative],
+                            backgroundColor: ['#76D7EA', '#FF9800'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((context.raw / total) * 100);
+                                        return `${context.label}: ${context.raw} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function displaySampleData(data, sentimentColumn, details) {
+                const sampleDataDiv = document.getElementById('sampleData');
+                sampleDataDiv.innerHTML = '';
+                
+                // Buat tabel untuk menampilkan data sample
+                const table = document.createElement('table');
+                
+                // Header tabel - tampilkan beberapa kolom penting
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                
+                // Cari kolom teks yang mungkin ada
+                const possibleTextColumns = Object.keys(data[0]).filter(key => 
+                    key.toLowerCase().includes('text') || 
+                    key.toLowerCase().includes('komentar') ||
+                    key.toLowerCase().includes('comment') ||
+                    key.toLowerCase().includes('review') ||
+                    key.toLowerCase().includes('pesan')
+                );
+                
+                // Pilih kolom untuk ditampilkan
+                const columnsToShow = [];
+                if (possibleTextColumns.length > 0) {
+                    columnsToShow.push(possibleTextColumns[0]);
+                }
+                columnsToShow.push(sentimentColumn);
+                
+                // Jika tidak ada kolom teks, tampilkan kolom pertama
+                if (columnsToShow.length === 1) {
+                    const firstColumn = Object.keys(data[0])[0];
+                    if (firstColumn !== sentimentColumn) {
+                        columnsToShow.unshift(firstColumn);
+                    }
+                }
+                
+                columnsToShow.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headerRow.appendChild(th);
+                });
+                
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                // Body tabel
+                const tbody = document.createElement('tbody');
+                
+                // Tampilkan maksimal 10 data sample
+                const samplesToShow = Math.min(10, details.length);
+                
+                for (let i = 0; i < samplesToShow; i++) {
+                    const detail = details[i];
+                    const row = document.createElement('tr');
+                    
+                    columnsToShow.forEach(column => {
+                        const td = document.createElement('td');
+                        let cellValue = detail.row[column] || '';
+                        
+                        // Potong teks jika terlalu panjang
+                        if (typeof cellValue === 'string' && cellValue.length > 100) {
+                            cellValue = cellValue.substring(0, 100) + '...';
+                        }
+                        
+                        td.textContent = cellValue;
+                        
+                        // Style untuk kolom sentiment
+                        if (column === sentimentColumn) {
+                            td.style.fontWeight = 'bold';
+                            td.style.color = detail.sentiment === 'positif' ? '#008080' : '#FF4500';
+                        }
+                        
+                        row.appendChild(td);
+                    });
+                    
+                    tbody.appendChild(row);
+                }
+                
+                table.appendChild(tbody);
+                sampleDataDiv.appendChild(table);
+            }
+        });
+
+        // Fungsi untuk menganalisis sentimen input pengguna
+        function analyzeSingleSentiment() {
+            const input = document.getElementById('sentimentInput').value.trim();
+            const resultDiv = document.getElementById('sentimentResult');
+            const button = document.getElementById('analyzeSentimentBtn');
+
+            if (!input) {
+                alert('Silakan masukkan teks terlebih dahulu!');
+                return;
+            }
+
+            // Nonaktifkan button sementara
+            button.disabled = true;
+            button.textContent = 'Menganalisis...';
+
+            // Simulasi delay untuk user experience
+            setTimeout(() => {
+                const sentiment = performSentimentAnalysisOnText(input);
+                displaySentimentResult(sentiment, input);
+                
+                // Aktifkan kembali button
+                button.disabled = false;
+                button.textContent = 'Analisis Sentimen';
+            }, 800);
+        }
+
+        function performSentimentAnalysisOnText(text) {
+            const lowercaseText = text.toLowerCase();
+            let positiveScore = 0;
+            let negativeScore = 0;
+            
+            // Hitung kata positif
+            const positiveWords = [
+                'baik', 'bagus', 'senang', 'suka', 'indah', 'hebat', 'luar biasa', 
+                'mantap', 'keren', 'memuaskan', 'sukses', 'berhasil', 'optimal', 
+                'positif', 'menyenangkan', 'sempurna', 'terbaik', 'unggul', 'ramah',
+                'cepat', 'menarik', 'mudah', 'puas', 'gembira', 'setuju', 'tepat',
+                'efektif', 'efisien', 'bermanfaat', 'membantu', 'bagus', 'kuat',
+                'cinta', 'senyum', 'sejahtera', 'nyaman', 'menyukai', 'mengesankan',
+                'excellent', 'great', 'good', 'awesome', 'amazing', 'love', 'like',
+                'nice', 'perfect', 'wonderful', 'happy', 'glad', 'beautiful', 'best',
+                'better', 'recommended', 'recommend', 'satisfied', 'lancar', 'apik',
+                'top', 'wow', 'terpercaya', 'menakjubkan', 'istimewa', 'brilian',
+                'oke', 'oke banget', 'profesional', 'helpful', 'enak', 'lezat'
+            ];
+            
+            const negativeWords = [
+                'buruk', 'jelek', 'sedih', 'kecewa', 'marah', 'benci', 'takut',
+                'rusak', 'gagal', 'menyesal', 'lambat', 'sulit', 'tidak', 'kurang',
+                'negatif', 'payah', 'lemah', 'cacat', 'rugi', 'salah', 'menyebalkan',
+                'membosankan', 'mengganggu', 'meragukan', 'bingung', 'mengecewakan',
+                'terburuk', 'mengerikan', 'kasar', 'menjengkelkan', 'malas', 'sakit',
+                'bad', 'worse', 'worst', 'hate', 'dislike', 'terrible', 'poor',
+                'slow', 'difficult', 'annoying', 'disappointed', 'disappointing',
+                'tidak nyaman', 'tidak menyenangkan', 'tidak memuaskan', 'ribet',
+                'parah', 'busuk', 'aneh', 'nggak jelas', 'nggak enak', 'tidak cocok',
+                'tidak direkomendasikan', 'tidak sopan', 'berbahaya', 'kacau', 'bapuk',
+                'kocak', 'tolol', 'anjing', 'babi', 'tai', 'tae', 'taek'
+            ];
+
+            positiveWords.forEach(word => {
+                const regex = new RegExp('\\b' + word + '\\b', 'gi');
+                const matches = lowercaseText.match(regex);
+                if (matches) {
+                    positiveScore += matches.length;
+                }
+            });
+            
+            negativeWords.forEach(word => {
+                const regex = new RegExp('\\b' + word + '\\b', 'gi');
+                const matches = lowercaseText.match(regex);
+                if (matches) {
+                    negativeScore += matches.length;
+                }
+            });
+
+            // Tentukan sentimen berdasarkan skor
+            if (positiveScore > negativeScore) {
+                return {
+                    sentiment: 'positif',
+                    confidence: Math.round((positiveScore / (positiveScore + negativeScore)) * 100),
+                    positiveWords: positiveScore,
+                    negativeWords: negativeScore
+                };
+            } else if (negativeScore > positiveScore) {
+                return {
+                    sentiment: 'negatif',
+                    confidence: Math.round((negativeScore / (positiveScore + negativeScore)) * 100),
+                    positiveWords: positiveScore,
+                    negativeWords: negativeScore
+                };
+            } else {
+                return {
+                    sentiment: 'netral',
+                    confidence: 50,
+                    positiveWords: positiveScore,
+                    negativeWords: negativeScore
+                };
+            }
+        }
+
+        function displaySentimentResult(analysis, originalText) {
+            const resultDiv = document.getElementById('sentimentResult');
+            
+            // Reset classes
+            resultDiv.className = 'sentiment-result';
+            
+            let resultText = '';
+            let resultClass = '';
+            
+            if (analysis.sentiment === 'positif') {
+                resultClass = 'positive';
+                resultText = `✅ <strong>POSITIF</strong><br>`;
+                resultText += `Teks yang Anda masukkan memiliki sentimen positif `;
+                if (analysis.confidence > 50) {
+                    resultText += `dengan tingkat kepercayaan ${analysis.confidence}%.`;
+                }
+            } else if (analysis.sentiment === 'negatif') {
+                resultClass = 'negative';
+                resultText = `❌ <strong>NEGATIF</strong><br>`;
+                resultText += `Teks yang Anda masukkan memiliki sentimen negatif `;
+                if (analysis.confidence > 50) {
+                    resultText += `dengan tingkat kepercayaan ${analysis.confidence}%.`;
+                }
+            } else {
+                resultClass = 'neutral';
+                resultText = `⚪ <strong>NETRAL</strong><br>`;
+                resultText += `Teks yang Anda masukkan memiliki sentimen netral atau seimbang.`;
+            }
+            
+            if (analysis.positiveWords > 0 || analysis.negativeWords > 0) {
+                resultText += `<br><small>Kata positif: ${analysis.positiveWords} | Kata negatif: ${analysis.negativeWords}</small>`;
+            }
+            
+            resultDiv.className = `sentiment-result ${resultClass}`;
+            resultDiv.innerHTML = resultText;
+        }
+
+        // Event listener untuk Enter key pada textarea
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('sentimentInput');
+            if (textarea) {
+                textarea.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        analyzeSingleSentiment();
+                    }
+                });
+            }
+        });
+
+            function showPreprocessingStep(stepName) {
+        // Sembunyikan semua content
+        const contents = document.querySelectorAll('.preprocessing-content');
+        contents.forEach(content => content.classList.remove('active'));
+        
+        // Hapus active class dari semua tabs
+        const tabs = document.querySelectorAll('.preprocessing-tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        
+        // Tampilkan content yang dipilih
+        document.getElementById(stepName).classList.add('active');
+        
+        // Aktifkan tab yang dipilih
+        event.target.closest('.preprocessing-tab').classList.add('active');
+    }
+
+        // Fungsi untuk menampilkan data preprocessing
+        function displayPreprocessingData(data, fields) {
+            console.log('Displaying preprocessing data...');
+            console.log('Available fields:', fields);
+            
+            // Cari kolom teks asli
+            const textColumn = findTextColumn(fields);
+            
+            // Definisi kolom preprocessing yang akan dicari
+            const preprocessingColumns = {
+                'cleaning': ['cleaning', 'clean', 'cleaned_text'],
+                'case_folding': ['case_folding', 'case_fold', 'lowercase'],
+                'hasil_normalisasi': ['hasil_normalisasi', 'normalisasi', 'normalized'],
+                'tokenize': ['tokenize', 'tokenized', 'tokens'],
+                'stopword_removal': ['stopword_removal', 'stopword', 'stopwords_removed'],
+                'stemming_data': ['stemming_data', 'stemming', 'stemmed']
+            };
+            
+            // Proses setiap tahap preprocessing
+            Object.keys(preprocessingColumns).forEach(stepName => {
+                const possibleColumns = preprocessingColumns[stepName];
+                const foundColumn = findColumnByNames(fields, possibleColumns);
+                
+                if (foundColumn) {
+                    console.log(`Found column for ${stepName}: ${foundColumn}`);
+                    displayPreprocessingStep(data, textColumn, foundColumn, stepName);
+                } else {
+                    console.log(`Column not found for ${stepName}`);
+                    displayNoDataMessage(stepName);
+                }
+            });
+            
+            // Tampilkan section preprocessing
+            document.getElementById('preprocessingSection').style.display = 'block';
+        }
+
+        // Fungsi untuk mencari kolom teks asli
+        function findTextColumn(fields) {
+            const textKeywords = [
+                'text', 'teks', 'komentar', 'comment', 'review', 'pesan', 
+                'message', 'content', 'konten', 'ulasan', 'feedback'
+            ];
+            
+            // Coba exact match dulu
+            for (const keyword of textKeywords) {
+                const column = fields.find(field => 
+                    field.toLowerCase() === keyword.toLowerCase()
+                );
+                if (column) return column;
+            }
+            
+            // Kemudian coba partial match
+            for (const keyword of textKeywords) {
+                const column = fields.find(field => 
+                    field.toLowerCase().includes(keyword.toLowerCase())
+                );
+                if (column) return column;
+            }
+            
+            // Jika tidak ditemukan, gunakan kolom pertama
+            return fields[0];
+        }
+
+        // Fungsi untuk mencari kolom berdasarkan nama-nama yang mungkin
+        function findColumnByNames(fields, possibleNames) {
+            // Coba exact match dulu
+            for (const name of possibleNames) {
+                const column = fields.find(field => 
+                    field.toLowerCase() === name.toLowerCase()
+                );
+                if (column) return column;
+            }
+            
+            // Kemudian coba partial match
+            for (const name of possibleNames) {
+                const column = fields.find(field => 
+                    field.toLowerCase().includes(name.toLowerCase())
+                );
+                if (column) return column;
+            }
+            
+            return null;
+        }
+
+        // Fungsi untuk menampilkan data preprocessing step
+        function displayPreprocessingStep(data, textColumn, preprocessingColumn, stepName) {
+            const containerMap = {
+                'cleaning': 'cleaningData',
+                'case_folding': 'caseFoldingData',
+                'hasil_normalisasi': 'normalisasiData',
+                'tokenize': 'tokenizeData',
+                'stopword_removal': 'stopwordData',
+                'stemming_data': 'stemmingData'
+            };
+            
+            const containerId = containerMap[stepName];
+            const container = document.getElementById(containerId);
+            
+            if (!container) return;
+            
+            // Buat tabel
+            const table = document.createElement('table');
+            table.className = 'preprocessing-table';
+            
+            // Header tabel
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            
+            const th1 = document.createElement('th');
+            th1.textContent = 'No.';
+            th1.style.width = '10px';
+            headerRow.appendChild(th1);
+            
+            const th2 = document.createElement('th');
+            th2.textContent = 'Teks Asli';
+            th2.style.width = '40%';
+            headerRow.appendChild(th2);
+            
+            const th3 = document.createElement('th');
+            th3.textContent = getStepTitle(stepName);
+            th3.style.width = '40%';
+            headerRow.appendChild(th3);
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Body tabel
+            const tbody = document.createElement('tbody');
+            
+            // Ambil sampel data (maksimal 10 baris)
+            const sampleSize = Math.min(10, data.length);
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const row = data[i];
+                const originalText = row[textColumn] || '';
+                const processedText = row[preprocessingColumn] || '';
+                
+                // Skip jika keduanya kosong
+                if (!originalText && !processedText) continue;
+                
+                const tr = document.createElement('tr');
+                
+                // Nomor
+                const td1 = document.createElement('td');
+                td1.textContent = i + 1;
+                td1.style.textAlign = 'center';
+                tr.appendChild(td1);
+                
+                // Teks asli
+                const td2 = document.createElement('td');
+                td2.textContent = truncateText(originalText, 150);
+                td2.className = 'original-text';
+                tr.appendChild(td2);
+                
+                // Teks hasil preprocessing
+                const td3 = document.createElement('td');
+                td3.textContent = truncateText(processedText, 150);
+                td3.className = 'processed-text';
+                tr.appendChild(td3);
+                
+                tbody.appendChild(tr);
+            }
+            
+            table.appendChild(tbody);
+            
+            // Clear container dan tambahkan tabel
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        // Fungsi untuk menampilkan pesan tidak ada data
+        function displayNoDataMessage(stepName) {
+            const containerMap = {
+                'cleaning': 'cleaningData',
+                'case_folding': 'caseFoldingData',
+                'hasil_normalisasi': 'normalisasiData',
+                'tokenize': 'tokenizeData',
+                'stopword_removal': 'stopwordData',
+                'stemming_data': 'stemmingData'
+            };
+            
+            const containerId = containerMap[stepName];
+            const container = document.getElementById(containerId);
+            
+            if (container) {
+                container.innerHTML = `<div class="no-data-message">Kolom ${getStepTitle(stepName)} tidak ditemukan dalam file CSV</div>`;
+            }
+        }
+
+        // Fungsi untuk mendapatkan judul step
+        function getStepTitle(stepName) {
+            const titles = {
+                'cleaning': 'Hasil Cleaning',
+                'case_folding': 'Hasil Case Folding',
+                'hasil_normalisasi': 'Hasil Normalisasi',
+                'tokenize': 'Hasil Tokenize',
+                'stopword_removal': 'Hasil Stopword Removal',
+                'stemming_data': 'Hasil Stemming'
+            };
+            
+            return titles[stepName] || stepName;
+        }
+
+        // Fungsi untuk memotong teks yang terlalu panjang
+        function truncateText(text, maxLength) {
+            if (!text || typeof text !== 'string') return '';
+            
+            if (text.length <= maxLength) return text;
+            
+            return text.substring(0, maxLength) + '...';
+        }
+    </script>
+</body>
+</html>
